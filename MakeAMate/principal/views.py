@@ -412,7 +412,7 @@ def registro(request):
 def twilio(request):
     if not request.user.is_authenticated or Usuario.objects.get(usuario = request.user).sms_validado:
         redirect(homepage)
-    Usuario.objects.get(usuario = request.user).sms_validado.set(True)
+    Usuario.objects.get(usuario = request.user).sms_validado.set(True).save()
 
     return redirect('')
 
