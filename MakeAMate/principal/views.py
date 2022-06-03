@@ -412,93 +412,9 @@ def registro(request):
 def twilio(request):
     if not request.user.is_authenticated or Usuario.objects.get(usuario = request.user).sms_validado:
         redirect(homepage)
-    account_sid = os.environ['TWILIO_ACCOUNT_SID']
-    auth_token = os.environ['TWILIO_AUTH_TOKEN']
-    client = Client(account_sid, auth_token)
-    servicio = "VAfd6998ee6818ae4ec6d0344f5a25c96d"
-    user = request.user
-    perfil = Usuario.objects.get(usuario = user)
-    piso = perfil.piso
-    telefono = perfil.telefono
-    
-    def validaciones(code):
-        if 20429 == code:
-            messages.error(request, message="Demasiadas peticiones en el servidor, inténtelo de nuevo más adelante.")
-        elif 60200 == code:
-            messages.error(request, message="Número de teléfono no válido, compruebe que el teléfono que ha introducido es correcto.")
-        elif 60202 == code:
-            messages.error(request, message="Por su seguridad se ha bloqueado el número de teléfono introducido, inténtelo de nuevo más adelante")
-        elif 60203 == code:
-            messages.error(request, message="Por su seguridad se ha bloqueado el número de teléfono introducido, inténtelo de nuevo más adelante")
-        elif 60207 == code:
-            messages.error(request, message="Demasiadas peticiones en el servicio, inténtelo de nuevo más adelante.")
-        elif 60212 == code:
-            messages.error(request, message="Demasiadas solicitudes simultáneas del número de teléfono, inténtelo de nuevo más adelante.")
-        else:
-            messages.error(request, message="Error validando el código: " + str(code))
-    
-    def start_verification(telefono):
-        try:
-            verification = client.verify \
-                .services(servicio) \
-                .verifications \
-                .create(to=telefono, channel="sms")
-            return verification
-        except TwilioRestException as e:            
-            validaciones(e.code)
-        
+    Usuario.objects.get(usuario = request.user).sms_validado.set(True)
 
-    def check_verification(telefono, codigo):
-        try:                  
-            verification_check = client.verify \
-                                .services(servicio) \
-                                .verification_checks \
-                                .create(to=telefono, code=codigo)
-            if verification_check.status=="approved":                 
-                perfil.sms_validado = True
-                perfil.save()
-                messages.success(request, message="Código validado correctamente. El usuario ha sido creado.")
-                return redirect("/")
-            else:
-                messages.error(request, message="El código es incorrecto. Inténtelo de nuevo.")
-                return redirect("registerSMS")
-        except TwilioRestException as e:
-            validaciones(e.code)
-            return redirect("registerSMS")
-
-
-    if request.method == "GET":
-        verification = start_verification(telefono)
-        form_sms = SmsForm(initial = {'modificar_telefono': 'No'})
-        form_tfno = CambiarTelefonoForm()
-
-    if request.method == 'POST':
-        if "cambiarTelefono" in request.POST:
-            form_tfno = CambiarTelefonoForm(request.POST)
-            if form_tfno.is_valid():
-                telefono_nuevo = form_tfno.cleaned_data["telefono_usuario"]
-                modificar_telefono = form_tfno.cleaned_data["modificar_telefono"]
-                if(modificar_telefono):                
-                    perfil.telefono = telefono_nuevo
-                    perfil.save()
-                    telefono = telefono_nuevo
-                return redirect("registerSMS")
-            else:
-                form_sms = SmsForm()
-                return render(request, 'loggeos/registerSMS.html', {'form_sms': form_sms, 'form_tfno': form_tfno, 'usuario':perfil})
-
-
-        if "verificarCodigo" in request.POST:
-            form_sms = SmsForm(request.POST, request.FILES)
-            if form_sms.is_valid():
-                codigo = form_sms.cleaned_data["codigo"]                
-                return check_verification(telefono, codigo)
-            else:
-                form_tfno = CambiarTelefonoForm()
-                return render(request, 'loggeos/registerSMS.html', {'form_sms': form_sms, 'form_tfno': form_tfno, 'usuario':perfil})
-
-
-    return render(request, 'loggeos/registerSMS.html', {'form_sms': form_sms, 'form_tfno': form_tfno, 'usuario':perfil})
+    return redirect('')
 
 def profile_view(request):
     if not request.user.is_authenticated:
